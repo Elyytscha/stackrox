@@ -27,10 +27,24 @@ var (
 type Entity struct {
 	Type storage.NetworkEntityInfo_Type
 	ID   string
+
+	// TODO this does not belong here
+	ExternalEntityName string
 }
 
 // ToProto converts the Entity struct to a storage.NetworkEntityInfo proto.
 func (e Entity) ToProto() *storage.NetworkEntityInfo {
+	if e.Type == storage.NetworkEntityInfo_EXTERNAL_SOURCE {
+		return &storage.NetworkEntityInfo{
+			Type: e.Type,
+			Id:   e.ID,
+			Desc: &storage.NetworkEntityInfo_ExternalSource_{
+				ExternalSource: &storage.NetworkEntityInfo_ExternalSource{
+					Name: e.ExternalEntityName,
+				},
+			},
+		}
+	}
 	return &storage.NetworkEntityInfo{
 		Type: e.Type,
 		Id:   e.ID,
@@ -58,6 +72,13 @@ func InternetEntity() Entity {
 	return Entity{
 		ID:   InternetExternalSourceID,
 		Type: storage.NetworkEntityInfo_INTERNET,
+	}
+}
+
+func ExternalEntity(name string) Entity {
+	return Entity{
+		Type:               storage.NetworkEntityInfo_EXTERNAL_SOURCE,
+		ExternalEntityName: name,
 	}
 }
 
