@@ -23,6 +23,10 @@ import (
 )
 
 func main() {
+	address := flag.String("address", ":8443", "Address to use to connect to the scanner service.")
+	serverName := flag.String("server-name", "",
+		"Server name of the scanner service, primarily used for TLS verification.")
+	skipTLSVerify := flag.Bool("insecure-skip-tls-verify", false, "Skip TLS certificate validation.")
 	certsPath := flag.String("certs", "", "Path to directory containing scanner certificates.")
 	basicAuth := flag.String("auth", "", "Use basic auth to authenticate with registries.")
 	imageDigest := flag.String("digest", "", "Use the specified image digest in the image "+
@@ -71,14 +75,14 @@ func main() {
 	ctx := context.Background()
 	tlsConfig, err := clientconn.TLSConfig(mtls.ScannerSubject, clientconn.TLSConfigOptions{
 		UseClientCert:      clientconn.MustUseClientCert,
-		ServerName:         "scanner-v4.stackrox",
-		InsecureSkipVerify: true,
+		ServerName:         *serverName,
+		InsecureSkipVerify: *skipTLSVerify,
 	})
 	if err != nil {
 		log.Fatalf("tls config: %v", err)
 	}
 
-	conn, err := grpc.Dial(":8443", grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
