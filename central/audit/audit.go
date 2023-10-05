@@ -117,9 +117,10 @@ func newAuditMessage(ctx context.Context, req interface{}, grpcFullMethod string
 	msg.Interaction = interaction
 
 	msg.Request = &v1.Audit_Message_Request{
-		Endpoint: endpoint,
-		Method:   method,
-		Payload:  requestToAny(req),
+		Endpoint:   endpoint,
+		Method:     method,
+		Payload:    requestToAny(req),
+		SourceHost: ri.SourceIP,
 	}
 
 	msg.Status, msg.StatusReason = calculateAuditStatus(authError, requestError)
