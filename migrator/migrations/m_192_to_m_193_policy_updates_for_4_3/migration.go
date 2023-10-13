@@ -53,6 +53,34 @@ var (
 			FieldsToCompare: fieldsToCompare,
 			PolicyFileName:  "network_baseline.json",
 		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "no_scans.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "scan_age.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "image_age_days.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "owner_team_label.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "owner_team_annotation.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "email_annotation.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "latest_tag.json",
+		},
 	}
 )
 
