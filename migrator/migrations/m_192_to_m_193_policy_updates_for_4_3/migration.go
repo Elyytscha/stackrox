@@ -81,6 +81,10 @@ var (
 			FieldsToCompare: fieldsToCompare,
 			PolicyFileName:  "latest_tag.json",
 		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "process_uid_zero.json",
+		},
 	}
 )
 
