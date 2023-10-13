@@ -45,6 +45,14 @@ var (
 			FieldsToCompare: fieldsToCompare,
 			PolicyFileName:  "exec-iptables-root.json",
 		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "deployment_has_ingress_network_policy.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "network_baseline.json",
+		},
 	}
 )
 
