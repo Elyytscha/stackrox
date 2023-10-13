@@ -42,6 +42,10 @@ type PolicyUpdates struct {
 	ExclusionsToAdd []*storage.Exclusion
 	// ExclusionsToRemove is a list of exclusions to remove from policy
 	ExclusionsToRemove []*storage.Exclusion
+	// CategoriesToAdd is a list of policy categories to add to the policy
+	CategoriesToAdd []string
+	// CategoriesToRemove is a list of policy categories to remove from policy
+	CategoriesToRemove []string
 	// Name is the new name for the policy
 	Name *string
 	// Remediation is the new remediation string
@@ -101,6 +105,20 @@ func (u *PolicyUpdates) applyToPolicy(policy *storage.Policy) {
 	if u.Description != nil {
 		policy.Description = *u.Description
 	}
+
+	if u.CategoriesToRemove != nil {
+		for _, toRemove := range u.CategoriesToRemove {
+			if !removeCategory(policy, toRemove) {
+				log.WriteToStderrf("policy ID %s has already been altered because category was already removed. Will not update.", policy.Id)
+				continue
+			}
+		}
+	}
+
+	// Add new exclusions as needed
+	if u.CategoriesToAdd != nil {
+		policy.Categories = append(policy.Categories, u.CategoriesToAdd...)
+	}
 }
 
 func removeExclusion(policy *storage.Policy, exclusionToRemove *storage.Exclusion) bool {
@@ -108,6 +126,17 @@ func removeExclusion(policy *storage.Policy, exclusionToRemove *storage.Exclusio
 	for i, exclusion := range exclusions {
 		if reflect.DeepEqual(exclusion, exclusionToRemove) {
 			policy.Exclusions = append(exclusions[:i], exclusions[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func removeCategory(policy *storage.Policy, categoryToRemove string) bool {
+	categories := policy.GetCategories()
+	for i, category := range categories {
+		if reflect.DeepEqual(category, categoryToRemove) {
+			policy.Categories = append(categories[:i], categories[i+1:]...)
 			return true
 		}
 	}
@@ -262,6 +291,11 @@ func diffPolicies(beforePolicy, afterPolicy *storage.Policy) (PolicyUpdates, err
 	beforePolicy.Disabled = false
 	afterPolicy.Disabled = false
 
+	// Diff categories and clear out if they are similar
+	getCategoryUpdates(beforePolicy, afterPolicy, &updates)
+	beforePolicy.Categories = nil
+	afterPolicy.Categories = nil
+
 	// TODO: Add others as needed
 
 	if !reflect.DeepEqual(beforePolicy, afterPolicy) {
@@ -289,6 +323,28 @@ func getExclusionsUpdates(beforePolicy *storage.Policy, afterPolicy *storage.Pol
 	for i, exclusion := range afterPolicy.GetExclusions() {
 		if !matchedAfterExclusionsIdxs.Contains(i) {
 			updates.ExclusionsToAdd = append(updates.ExclusionsToAdd, exclusion)
+		}
+	}
+}
+
+func getCategoryUpdates(beforePolicy *storage.Policy, afterPolicy *storage.Policy, updates *PolicyUpdates) {
+	matchedAfterCategoriesIdx := set.NewSet[int]()
+	for _, beforeCategory := range beforePolicy.GetCategories() {
+		var found bool
+		for afterCategoryIdx, afterCategory := range afterPolicy.GetCategories() {
+			if reflect.DeepEqual(beforeCategory, afterCategory) {
+				found = true
+				matchedAfterCategoriesIdx.Add(afterCategoryIdx)
+				break
+			}
+		}
+		if !found {
+			updates.CategoriesToRemove = append(updates.CategoriesToRemove, beforeCategory)
+		}
+	}
+	for i, category := range afterPolicy.GetCategories() {
+		if !matchedAfterCategoriesIdx.Contains(i) {
+			updates.CategoriesToAdd = append(updates.CategoriesToAdd, category)
 		}
 	}
 }

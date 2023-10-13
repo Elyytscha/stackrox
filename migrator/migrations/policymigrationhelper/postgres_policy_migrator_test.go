@@ -207,3 +207,71 @@ func (s *postgresPolicyMigratorTestSuite) TestExclusionAreAddedAndRemovedAsNeces
 
 	s.comparePolicyWithDB(policyID, policy)
 }
+
+// Test that categories can get added and removed appropriately
+func (s *postgresPolicyMigratorTestSuite) TestCategoriesAreAddedAndRemovedAsNecessary() {
+	policy := testPolicy(policyID)
+
+	// Add a bunch of exclusions into the DB
+	policy.Categories = []string{"cat-1", "cat-2", "cat-3", "cat-4"}
+
+	s.NoError(s.store.Upsert(s.ctx, policy))
+
+	comparisonPolicies := map[string]*storage.Policy{
+		policyID: policy,
+	}
+
+	policiesToMigrate := map[string]PolicyChanges{
+		policyID: {
+			FieldsToCompare: []FieldComparator{PolicySectionComparator},
+			ToChange: PolicyUpdates{
+				CategoriesToAdd:    []string{"category-2-changed", "category-5"},
+				CategoriesToRemove: []string{"cat-2", "cat-4", "i-dont-exist"},
+			},
+		},
+	}
+
+	s.NoError(MigratePoliciesWithStoreV2(
+		policiesToMigrate,
+		comparisonPolicies,
+		s.store.Get,
+		s.store.Upsert,
+	))
+
+	// Policy categories should be updated
+	policy.Categories = []string{"cat-1", "cat-3", "category-2-changed", "category-5"}
+	s.comparePolicyWithDB(policyID, policy)
+}
+
+// Test that exclusions are added if the policy never had any before
+func (s *postgresPolicyMigratorTestSuite) TestCategoriesAreAddedEvenIfPolicyHadNoneBefore() {
+	policy := testPolicy(policyID)
+
+	// Remove all categories to start with
+	policy.Categories = nil
+	s.NoError(s.store.Upsert(s.ctx, policy))
+
+	comparisonPolicies := map[string]*storage.Policy{
+		policyID: policy,
+	}
+
+	policiesToMigrate := map[string]PolicyChanges{
+		policyID: {
+			FieldsToCompare: []FieldComparator{PolicySectionComparator},
+			ToChange: PolicyUpdates{
+				CategoriesToAdd: []string{"category-added"},
+			},
+		},
+	}
+
+	s.NoError(MigratePoliciesWithStoreV2(
+		policiesToMigrate,
+		comparisonPolicies,
+		s.store.Get,
+		s.store.Upsert,
+	))
+
+	// Policy categories should be updated
+	policy.Categories = []string{"category-added"}
+	s.comparePolicyWithDB(policyID, policy)
+}
