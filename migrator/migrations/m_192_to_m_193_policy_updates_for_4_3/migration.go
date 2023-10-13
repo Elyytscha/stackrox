@@ -36,7 +36,16 @@ var (
 		policymigrationhelper.PolicySectionComparator,
 	}
 
-	policyDiffs = []policymigrationhelper.PolicyDiff{}
+	policyDiffs = []policymigrationhelper.PolicyDiff{
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "exec-iptables.json",
+		},
+		{
+			FieldsToCompare: fieldsToCompare,
+			PolicyFileName:  "exec-iptables-root.json",
+		},
+	}
 )
 
 func updatePolicies(db *gorm.DB) error {

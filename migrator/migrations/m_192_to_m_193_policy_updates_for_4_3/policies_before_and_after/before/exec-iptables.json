@@ -74,9 +74,6 @@
           "values": [
             {
               "value": "iptables"
-            },
-            {
-              "value": "nft"
             }
           ]
         }
