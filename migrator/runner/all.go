@@ -27,4 +27,5 @@ import (
 	_ "github.com/stackrox/rox/migrator/migrations/m_190_to_m_191_plop_add_closed_time_column"
 	_ "github.com/stackrox/rox/migrator/migrations/m_191_to_m_192_vulnerability_requests_searchable_scope"
 	_ "github.com/stackrox/rox/migrator/migrations/m_192_to_m_193_create_vulnerability_requests_for_legacy"
+	_ "github.com/stackrox/rox/migrator/migrations/m_193_to_m_194_image_scope_for_global_scope"
 )
