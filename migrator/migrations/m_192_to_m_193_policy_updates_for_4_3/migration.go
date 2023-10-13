@@ -15,8 +15,8 @@ import (
 
 var (
 	migration = types.Migration{
-		StartingSeqNum: 191,
-		VersionAfter:   &storage.Version{SeqNum: 192},
+		StartingSeqNum: 192,
+		VersionAfter:   &storage.Version{SeqNum: 193},
 		Run: func(databases *types.Databases) error {
 			err := updatePolicies(databases.GormDB)
 			if err != nil {
