@@ -159,6 +159,7 @@ func (s *postgresPolicyMigratorTestSuite) TestExclusionAreAddedAndRemovedAsNeces
 	policy.Exclusions = []*storage.Exclusion{
 		{Name: "exclusion0", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-0"}}},
 		{Name: "exclusion1", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace 1"}}},
+		{Name: "exclusion0", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-0"}}},
 		{Name: "exclusion2", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-2"}}},
 		{Name: "exclusion3", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-3"}}},
 		{Name: "exclusion4", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-4"}}},
@@ -198,6 +199,7 @@ func (s *postgresPolicyMigratorTestSuite) TestExclusionAreAddedAndRemovedAsNeces
 	// Policy exclusions should be updated
 	policy.Exclusions = []*storage.Exclusion{
 		{Name: "exclusion0", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-0"}}},
+		{Name: "exclusion0", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-0"}}},
 		{Name: "exclusion2", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-2"}}},
 		{Name: "exclusion3", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-3"}}},
 		{Name: "exclusion1-changed", Deployment: &storage.Exclusion_Deployment{Scope: &storage.Scope{Namespace: "namespace-1"}}},
@@ -213,7 +215,7 @@ func (s *postgresPolicyMigratorTestSuite) TestCategoriesAreAddedAndRemovedAsNece
 	policy := testPolicy(policyID)
 
 	// Add a bunch of exclusions into the DB
-	policy.Categories = []string{"cat-1", "cat-2", "cat-3", "cat-4"}
+	policy.Categories = []string{"cat-1", "cat-2", "cat-3", "cat-2", "cat-4"}
 
 	s.NoError(s.store.Upsert(s.ctx, policy))
 
@@ -239,7 +241,7 @@ func (s *postgresPolicyMigratorTestSuite) TestCategoriesAreAddedAndRemovedAsNece
 	))
 
 	// Policy categories should be updated
-	policy.Categories = []string{"cat-1", "cat-3", "category-2-changed", "category-5"}
+	policy.Categories = []string{"cat-1", "cat-3", "cat-2", "category-2-changed", "category-5"}
 	s.comparePolicyWithDB(policyID, policy)
 }
 

@@ -311,9 +311,12 @@ func getExclusionsUpdates(beforePolicy *storage.Policy, afterPolicy *storage.Pol
 		var found bool
 		for afterExclusionIdx, afterExclusion := range afterPolicy.GetExclusions() {
 			if reflect.DeepEqual(beforeExclusion, afterExclusion) {
-				found = true
-				matchedAfterExclusionsIdxs.Add(afterExclusionIdx)
-				break
+				if !matchedAfterExclusionsIdxs.Contains(afterExclusionIdx) { // to account for duplicates
+					found = true
+					matchedAfterExclusionsIdxs.Add(afterExclusionIdx)
+					break
+				}
+
 			}
 		}
 		if !found {
@@ -333,9 +336,11 @@ func getCategoryUpdates(beforePolicy *storage.Policy, afterPolicy *storage.Polic
 		var found bool
 		for afterCategoryIdx, afterCategory := range afterPolicy.GetCategories() {
 			if reflect.DeepEqual(beforeCategory, afterCategory) {
-				found = true
-				matchedAfterCategoriesIdx.Add(afterCategoryIdx)
-				break
+				if !matchedAfterCategoriesIdx.Contains(afterCategoryIdx) {
+					found = true
+					matchedAfterCategoriesIdx.Add(afterCategoryIdx)
+					break
+				}
 			}
 		}
 		if !found {
