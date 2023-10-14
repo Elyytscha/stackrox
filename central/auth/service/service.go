@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/stackrox/rox/central/auth/datastore"
+	"github.com/stackrox/rox/central/auth/m2m"
 	roleDataStore "github.com/stackrox/rox/central/role/datastore"
 	v1 "github.com/stackrox/rox/generated/api/v1"
+	"github.com/stackrox/rox/pkg/env"
 	"github.com/stackrox/rox/pkg/grpc"
 	"github.com/stackrox/rox/pkg/sync"
 )
@@ -27,7 +29,12 @@ type Service interface {
 // Singleton returns a new auth service instance.
 func Singleton() Service {
 	once.Do(func() {
-		s = &serviceImpl{authDataStore: datastore.Singleton(), roleDataStore: roleDataStore.Singleton()}
+		svc := &serviceImpl{authDataStore: datastore.Singleton(), roleDataStore: roleDataStore.Singleton()}
+		if env.AuthMachineToMachine.BooleanSetting() {
+			svc.authDataStore = datastore.Singleton()
+			svc.tokenExchanger = m2m.TokenExchangerSetSingleton(roleDataStore.Singleton())
+		}
+		s = svc
 	})
 	return s
 }
