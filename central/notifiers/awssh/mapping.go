@@ -36,8 +36,8 @@ var (
 		"system modification":      "Effects",
 		"kubernetes events":        "Unusual Behaviors",
 		"docker cis":               "Software and Configuration Checks/Industry and Regulatory Standards",
-		"zero trust":               "TTPs",
-		"supply chain security":    "TTPs",
+		"zero trust":               "Software and Configuration Checks",
+		"supply chain security":    "Software and Configuration Checks",
 	}
 
 	defaultFindingType = "TTPs"
