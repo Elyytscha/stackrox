@@ -15,6 +15,7 @@ import (
 	"github.com/stackrox/rox/migrator/log"
 	"github.com/stackrox/rox/pkg/jsonutil"
 	"github.com/stackrox/rox/pkg/set"
+	"github.com/stackrox/rox/pkg/sliceutils"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -115,9 +116,9 @@ func (u *PolicyUpdates) applyToPolicy(policy *storage.Policy) {
 		}
 	}
 
-	// Add new exclusions as needed
+	// Add new categories as needed (unless it already exists)
 	if u.CategoriesToAdd != nil {
-		policy.Categories = append(policy.Categories, u.CategoriesToAdd...)
+		policy.Categories = append(policy.Categories, sliceutils.Without(u.CategoriesToAdd, policy.Categories)...)
 	}
 }
 
@@ -335,7 +336,7 @@ func getCategoryUpdates(beforePolicy *storage.Policy, afterPolicy *storage.Polic
 	for _, beforeCategory := range beforePolicy.GetCategories() {
 		var found bool
 		for afterCategoryIdx, afterCategory := range afterPolicy.GetCategories() {
-			if reflect.DeepEqual(beforeCategory, afterCategory) {
+			if beforeCategory == afterCategory {
 				if !matchedAfterCategoriesIdx.Contains(afterCategoryIdx) {
 					found = true
 					matchedAfterCategoriesIdx.Add(afterCategoryIdx)

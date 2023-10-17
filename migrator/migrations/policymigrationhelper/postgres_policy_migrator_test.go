@@ -215,7 +215,7 @@ func (s *postgresPolicyMigratorTestSuite) TestCategoriesAreAddedAndRemovedAsNece
 	policy := testPolicy(policyID)
 
 	// Add a bunch of exclusions into the DB
-	policy.Categories = []string{"cat-1", "cat-2", "cat-3", "cat-2", "cat-4"}
+	policy.Categories = []string{"cat-1", "cat-2", "my-cat", "cat-2", "cat-4", "duped-category"}
 
 	s.NoError(s.store.Upsert(s.ctx, policy))
 
@@ -227,7 +227,7 @@ func (s *postgresPolicyMigratorTestSuite) TestCategoriesAreAddedAndRemovedAsNece
 		policyID: {
 			FieldsToCompare: []FieldComparator{PolicySectionComparator},
 			ToChange: PolicyUpdates{
-				CategoriesToAdd:    []string{"category-2-changed", "category-5"},
+				CategoriesToAdd:    []string{"category-2-changed", "category-5", "duped-category"},
 				CategoriesToRemove: []string{"cat-2", "cat-4", "i-dont-exist"},
 			},
 		},
@@ -241,7 +241,7 @@ func (s *postgresPolicyMigratorTestSuite) TestCategoriesAreAddedAndRemovedAsNece
 	))
 
 	// Policy categories should be updated
-	policy.Categories = []string{"cat-1", "cat-3", "cat-2", "category-2-changed", "category-5"}
+	policy.Categories = []string{"cat-1", "my-cat", "cat-2", "duped-category", "category-2-changed", "category-5"}
 	s.comparePolicyWithDB(policyID, policy)
 }
 
