@@ -37,6 +37,11 @@ Please avoid adding duplicate information across this changelog and JIRA/doc inp
 - ROX-14701: Starting from 4.3.0 release, `roxctl` binaries for `ppc64le` and `s390x` architectures are available for download from `https://mirror.openshift.com/pub/rhacs/assets/<version>/Linux/roxctl-<ppc64le|s390x>` (e.g. <https://mirror.openshift.com/pub/rhacs/assets/4.3.0/Linux/roxctl-s390x>).
 - The experimental API `/v1/product/usage` has been renamed to `/v1/administration/usage`.
 - Risk reprocessing has been shifted from being potentially computed every 15 seconds to 10 minutes. This will improve system performance by debouncing expensive risk calculations.
+- ROX:20288: A new environment variable `ROX_AUDIT_LOG_WITHOUT_PERMISSIONS` has been added to Central (defaults to `false`).
+  When set to `true`, audit log messages will not contain the detailed permissions of the user associated with the request.
+  Instead, only the associated role names will be there. Enabling this will lower the verbosity of the audit log messages,
+  but investigating associated permissions for a requester might be harder (i.e. the associated role would have be known at the time of the request).
+  Thus, it is generally not recommended to set this to `true`.
 
 ## [4.2.0]
 
