@@ -28,7 +28,7 @@ func Export(ctx context.Context, outputDir string) error {
 		return err
 	}
 	// create output json file
-	outputFile, err := os.Create(filepath.Join(outputDir, "output.json.ztd"))
+	outputFile, err := os.Create(filepath.Join(outputDir, "output.json.zst"))
 	if err != nil {
 		return err
 	}
@@ -59,10 +59,9 @@ func Export(ctx context.Context, outputDir string) error {
 	outOfTree := append(make([][]driver.Updater, 1), updaterSet.Updaters())
 
 	for i, uSet := range [][]string{
-		{"oracle", "aws", "rhcc"},
-		{"alpine", "rhel", "debian"},
-		{"ubuntu", "suse", "photon"},
-		{"osv"},
+		{"oracle", "ubuntu", "rhcc", "suse"},
+		{"alpine", "rhel", "debian", "photon"},
+		{"aws", "osv"},
 	} {
 		jsonStore, err := jsonblob.New()
 		if err != nil {
