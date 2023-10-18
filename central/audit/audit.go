@@ -120,7 +120,12 @@ func newAuditMessage(ctx context.Context, req interface{}, grpcFullMethod string
 		Endpoint: endpoint,
 		Method:   method,
 		Payload:  requestToAny(req),
-		SourceIp: ri.SourceIP,
+		Source: &v1.Audit_Message_Request_Source{
+			XForwardedFor: ri.Source.XForwardedFor,
+			RemoteAddr:    ri.Source.RemoteAddr,
+			RequestAddr:   ri.Source.RequestAddr,
+		},
+		SourceIp: ri.Source.GetSourceIP(),
 	}
 
 	msg.Status, msg.StatusReason = calculateAuditStatus(authError, requestError)
