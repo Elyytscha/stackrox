@@ -62,4 +62,7 @@ var (
 
 	// SensorReconciliationOnReconnect enables sensors to support reconciliation when reconnecting
 	SensorReconciliationOnReconnect = registerFeature("Enable Sensors to support reconciliation on reconnect", "ROX_SENSOR_RECONCILIATION", false)
+
+	// ScannerV4 enables various capabilities associated with ACS + Clair consolidated scanner.
+	ScannerV4 = registerFeature("Enable Scanner v4", "ROX_SCANNER_V4", true)
 )
