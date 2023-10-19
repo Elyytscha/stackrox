@@ -20,7 +20,7 @@ import (
 )
 
 // Export is responsible for triggering the updaters to download Common Vulnerabilities and Exposures (CVEs) data
-// and then outputting the result as a zstd-compressed file with .ztd extension
+// and then outputting the result as a zstd-compressed file with .zst extension
 func Export(ctx context.Context, outputDir string) error {
 
 	err := os.MkdirAll(outputDir, 0700)
@@ -28,7 +28,7 @@ func Export(ctx context.Context, outputDir string) error {
 		return err
 	}
 	// create output json file
-	outputFile, err := os.Create(filepath.Join(outputDir, "output.json.zst"))
+	outputFile, err := os.Create(filepath.Join(outputDir, "output.zst"))
 	if err != nil {
 		return err
 	}
@@ -56,25 +56,24 @@ func Export(ctx context.Context, outputDir string) error {
 	if err != nil {
 		return err
 	}
-	outOfTree := append(make([][]driver.Updater, 1), updaterSet.Updaters())
+	outOfTree := [][]driver.Updater{
+		make([]driver.Updater, 0),
+	}
+	outOfTree = append(outOfTree, updaterSet.Updaters())
 
 	for i, uSet := range [][]string{
-		{"oracle", "ubuntu", "rhcc", "suse"},
-		{"alpine", "rhel", "debian", "photon"},
-		{"aws", "osv"},
+		{"oracle", "photon", "suse", "osv", "rhcc"},
+		{"alpine", "rhel", "ubuntu", "aws", "debian"},
 	} {
 		jsonStore, err := jsonblob.New()
 		if err != nil {
 			return err
 		}
 
-		options := []updates.ManagerOption{
+		updateMgr, err := updates.NewManager(ctx, jsonStore, updates.NewLocalLockSource(), httpClient,
 			updates.WithEnabled(uSet),
-		}
-		if i < len(outOfTree) {
-			options = append(options, updates.WithOutOfTree(outOfTree[i]))
-		}
-		updateMgr, err := updates.NewManager(ctx, jsonStore, updates.NewLocalLockSource(), httpClient, options...)
+			updates.WithOutOfTree(outOfTree[i]),
+		)
 		if err != nil {
 			return err
 		}
