@@ -86,6 +86,16 @@ func Export(ctx context.Context, outputDir string) error {
 		if err != nil {
 			return err
 		}
+
+		// Flush the zstd writer to make sure compressed data is sent to outputFile
+		if err := zstdWriter.Flush(); err != nil {
+			return err
+		}
+
+		// Ensure data is flushed from OS buffers to the disk
+		if err := outputFile.Sync(); err != nil {
+			return err
+		}
 	}
 
 	return nil
