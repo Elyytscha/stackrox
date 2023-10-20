@@ -3,6 +3,7 @@ package resources
 import (
 	"github.com/pkg/errors"
 	"github.com/stackrox/rox/generated/storage"
+	"github.com/stackrox/rox/pkg/features"
 	"github.com/stackrox/rox/pkg/set"
 	"github.com/stackrox/rox/pkg/sync"
 	"github.com/stackrox/rox/sensor/common/deduper"
@@ -279,18 +280,22 @@ func (ds *DeploymentStore) BuildDeploymentWithDependencies(id string, dependenci
 		return nil, false, errors.Errorf("deployment with ID %s doesn't exist in the internal deployment store", id)
 	}
 
-	snapshot, exists := ds.deploymentSnapshots[wrap.GetId()]
+	var dependencyHash uint64
+	if features.SensorDeploymentBuildOptimization.Enabled() {
+		var err error
+		snapshot, exists := ds.deploymentSnapshots[wrap.GetId()]
 
-	dependencyHash, err := dependencies.GetHash()
-	if err != nil {
-		return nil, false, errors.Wrap(err, "hashing deployment dependencies")
-	}
+		dependencyHash, err = dependencies.GetHash()
+		if err != nil {
+			return nil, false, errors.Wrap(err, "hashing deployment dependencies")
+		}
 
-	if wrap.isBuilt {
-		// check if dependencies changed, otherwise return an existing deployment object without needing to clone
-		// or check for hashes.
-		if exists && dependencyHash == snapshot.dependenciesHash {
-			return snapshot.builtDeployment, false, nil
+		if wrap.isBuilt {
+			// check if dependencies changed, otherwise return an existing deployment object without needing to clone
+			// or check for hashes.
+			if exists && dependencyHash == snapshot.dependenciesHash {
+				return snapshot.builtDeployment, false, nil
+			}
 		}
 	}
 
@@ -312,9 +317,13 @@ func (ds *DeploymentStore) BuildDeploymentWithDependencies(id string, dependenci
 	// If it's the first time we are building, or the snapshot is different, then update and clone the deployment
 	ds.addOrUpdateDeploymentNoLock(wrap)
 	clone := wrap.GetDeployment().Clone()
-	ds.deploymentSnapshots[clone.GetId()] = snapshotEntry{
-		dependenciesHash: dependencyHash,
-		builtDeployment:  clone,
+
+	if features.SensorDeploymentBuildOptimization.Enabled() {
+		ds.deploymentSnapshots[clone.GetId()] = snapshotEntry{
+			dependenciesHash: dependencyHash,
+			builtDeployment:  clone,
+		}
 	}
+
 	return clone, true, nil
 }
