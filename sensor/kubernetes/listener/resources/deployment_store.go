@@ -269,28 +269,28 @@ func (ds *DeploymentStore) GetBuiltDeployment(id string) (*storage.Deployment, b
 }
 
 // BuildDeploymentWithDependencies creates storage.Deployment object using external object dependencies.
-func (ds *DeploymentStore) BuildDeploymentWithDependencies(id string, dependencies store.Dependencies) (*storage.Deployment, error) {
+func (ds *DeploymentStore) BuildDeploymentWithDependencies(id string, dependencies store.Dependencies) (*storage.Deployment, bool, error) {
 	ds.lock.Lock()
 	defer ds.lock.Unlock()
 
 	// Get wrap with no lock since ds.lock.Lock() was already requested above
 	wrap, found := ds.deployments[id]
 	if !found || wrap == nil {
-		return nil, errors.Errorf("deployment with ID %s doesn't exist in the internal deployment store", id)
+		return nil, false, errors.Errorf("deployment with ID %s doesn't exist in the internal deployment store", id)
 	}
 
 	snapshot, exists := ds.deploymentSnapshots[wrap.GetId()]
 
 	dependencyHash, err := dependencies.GetHash()
 	if err != nil {
-		return nil, errors.Wrap(err, "hashing deployment dependencies")
+		return nil, false, errors.Wrap(err, "hashing deployment dependencies")
 	}
 
 	if wrap.isBuilt {
 		// check if dependencies changed, otherwise return an existing deployment object without needing to clone
 		// or check for hashes.
 		if exists && dependencyHash == snapshot.dependenciesHash {
-			return snapshot.builtDeployment, nil
+			return snapshot.builtDeployment, false, nil
 		}
 	}
 
@@ -304,7 +304,7 @@ func (ds *DeploymentStore) BuildDeploymentWithDependencies(id string, dependenci
 	wrap.populateDataFromPods(dependencies.LocalImages, wrap.pods...)
 
 	if err := wrap.updateHash(); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	wrap.isBuilt = true
@@ -316,5 +316,5 @@ func (ds *DeploymentStore) BuildDeploymentWithDependencies(id string, dependenci
 		dependenciesHash: dependencyHash,
 		builtDeployment:  clone,
 	}
-	return clone, nil
+	return clone, true, nil
 }
