@@ -1,7 +1,6 @@
 package repomapping
 
 import (
-	"archive/zip"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,13 +9,14 @@ import (
 
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/stackrox/rox/central/scannerdefinitions/file"
 	"github.com/stackrox/rox/pkg/concurrency"
 	"github.com/stackrox/rox/pkg/sync"
 )
 
 type repoMappingUpdater struct {
-	file *file.File
+	files []*file.File
 
 	client      *http.Client
 	downloadURL string
@@ -27,16 +27,12 @@ type repoMappingUpdater struct {
 
 const (
 	baseURL = "https://storage.googleapis.com/scanner-v4-test/redhat-repository-mappings/"
-
-	container2Repo = "container-name-repos-map.json"
-	repo2Cpe       = "repository-to-cpe.json"
-	zipFileName    = "archive.zip"
 )
 
 // NewUpdater creates a new updater.
-func NewUpdater(file *file.File, client *http.Client, downloadURL string, interval time.Duration) *repoMappingUpdater {
+func NewUpdater(files []*file.File, client *http.Client, downloadURL string, interval time.Duration) *repoMappingUpdater {
 	return &repoMappingUpdater{
-		file:        file,
+		files:       files,
 		client:      client,
 		downloadURL: downloadURL,
 		interval:    interval,
@@ -88,95 +84,32 @@ func (u *repoMappingUpdater) doUpdate() error {
 	}
 	defer os.RemoveAll(tempDir)
 
-	filesToDownload := []string{container2Repo, repo2Cpe}
-	for _, file := range filesToDownload {
-		err := downloadFromURL(baseURL+file, tempDir, file)
+	filesToDownload := []string{name2Cpe, repo2Cpe}
+	for i, file := range filesToDownload {
+		if i >= len(u.files) {
+			return errors.New("Insufficient files available to store the downloaded JSON.")
+		}
+
+		out, err := downloadFromURL(baseURL+file, tempDir, file)
 		if err != nil {
 			return fmt.Errorf("failed to download %s: %v", file, err)
 		}
+		// Seek to the beginning of the outZip
+		_, err = out.Seek(0, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("error seeking to the beginning of zip outZip: %w", err)
+		}
+		err = u.files[i].WriteContent(out)
+		if err != nil {
+			return fmt.Errorf("error writing file to content: %w", err)
+		}
+		log.Infof("Successfully write to the content: %v", u.files[i].Path())
 	}
-	log.Info("Finished downloading repo mapping data for Scanner V4")
 
-	archivePath := filepath.Join(tempDir, zipFileName)
-	outZip, err := archiveFiles(tempDir, archivePath, filesToDownload)
-	if err != nil {
-		return fmt.Errorf("failed to archive files: %v", err)
-	}
-	log.Infof("Successfully generated zip file: %v", outZip.Name())
-
-	// Seek to the beginning of the outZip
-	_, err = outZip.Seek(0, io.SeekStart)
-	if err != nil {
-		return fmt.Errorf("error seeking to the beginning of zip outZip: %w", err)
-	}
-	u.file.WriteContent(outZip)
-	log.Infof("Successfully write to the content: %v", u.file.Path())
 	return nil
 }
 
-func addFileToZip(zipWriter *zip.Writer, filename string) error {
-	fileToZip, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err = fileToZip.Close(); err != nil {
-			log.Errorf("Failed to close file %q: %v", filename, err)
-		}
-	}()
-
-	// Get the file information
-	info, err := fileToZip.Stat()
-	if err != nil {
-		return err
-	}
-
-	// Create a header based on the file information
-	header, err := zip.FileInfoHeader(info)
-	if err != nil {
-		return err
-	}
-	header.Method = zip.Deflate
-
-	writer, err := zipWriter.CreateHeader(header)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(writer, fileToZip)
-	return err
-}
-
-func archiveFiles(dirPath, zipFilePath string, files []string) (*os.File, error) {
-	if files == nil || len(files) < 1 {
-		return nil, fmt.Errorf("error: no repository mapping files available to archive")
-	}
-	// Create a new zip archive.
-	outFile, err := os.Create(zipFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	zipWriter := zip.NewWriter(outFile)
-
-	for _, file := range files {
-		fileName := filepath.Join(dirPath, file)
-		err = addFileToZip(zipWriter, fileName)
-		if err != nil {
-			zipWriter.Close()
-			outFile.Close()
-			return nil, err
-		}
-	}
-
-	if err := zipWriter.Close(); err != nil {
-		outFile.Close()
-		return nil, err
-	}
-
-	return outFile, nil
-}
-
-func downloadFromURL(url, dir, filename string) error {
+func downloadFromURL(url, dir, filename string) (*os.File, error) {
 	const maxRetries = 3
 	var lastErr error
 
@@ -188,28 +121,24 @@ func downloadFromURL(url, dir, filename string) error {
 			continue
 		}
 
+		defer resp.Body.Close()
+
 		if resp.StatusCode == http.StatusOK { // Success
 			out, err := os.Create(filepath.Join(dir, filename))
 			if err != nil {
-				resp.Body.Close()
-				return err
+				return nil, err
 			}
 
 			_, err = io.Copy(out, resp.Body)
 			if err != nil {
-				out.Close()
-				return err
+				return nil, err
 			}
-			resp.Body.Close()
-			out.Close()
-			return nil
+
+			return out, nil
 		} else {
-			resp.Body.Close()
 			time.Sleep(time.Second * 3)
 			continue
 		}
-
-		break
 	}
-	return lastErr
+	return nil, lastErr
 }

@@ -35,6 +35,10 @@ const (
 	repoMappingURL = "https://storage.googleapis.com/scanner-v4-test/redhat-repository-mappings/"
 
 	defaultUpdateInterval = 4 * time.Hour
+
+	name2Cpe = "container-name-repos-map.json"
+
+	repo2Cpe = "repository-to-cpe.json"
 )
 
 var (
@@ -45,6 +49,11 @@ var (
 
 	log     = logging.LoggerForModule()
 	randGen = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	fileTypeMap = map[string]string{
+		"name2Cpe": name2Cpe,
+		"repo2Cpe": repo2Cpe,
+	}
 )
 
 type requestedUpdater struct {
@@ -119,7 +128,16 @@ func (h *httpHandler) fetchRepoMappingData(ctx context.Context) {
 }
 
 func (h *httpHandler) get(w http.ResponseWriter, r *http.Request) {
-	file, modTime, err := h.openOfflineFile(context.Background(), repoMappingZipfileName)
+	fileType := r.Header.Get("File-Name")
+	var fileName string
+	// Use the map to get the file name based on file type
+	if fn, ok := fileTypeMap[fileType]; ok {
+		fileName = fn
+	} else {
+		http.Error(w, "file not found", http.StatusNotFound)
+		return
+	}
+	file, modTime, err := h.openOfflineFile(context.Background(), fileName)
 	if err != nil || file == nil {
 		http.Error(w, "file not found", http.StatusNotFound)
 		return
@@ -142,12 +160,16 @@ func (h *httpHandler) getUpdater() {
 		log.Errorf("Error creating directory: %v", err)
 		return
 	}
-	pathToFile := filepath.Join(h.dataDir, "repo.zip")
+
+	files := []*file.File{
+		file.New(filepath.Join(h.dataDir, name2Cpe)),
+		file.New(filepath.Join(h.dataDir, repo2Cpe)),
+	}
 
 	if h.updater == nil || h.updater.repoMappingUpdater == nil {
 		h.updater = &requestedUpdater{
 			repoMappingUpdater: NewUpdater(
-				file.New(pathToFile),
+				files,
 				client,
 				repoMappingURL,
 				h.interval,
@@ -159,28 +181,31 @@ func (h *httpHandler) getUpdater() {
 }
 
 func (h *httpHandler) handleRepoMappingFile(ctx context.Context) error {
-	file, err := os.Open(h.updater.file.Path())
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+	for _, fileObj := range h.updater.files {
+		file, err := os.Open(fileObj.Path()) // Assuming fileObj has a method Path() that returns the file path
+		if err != nil {
+			return err
+		}
 
-	// Get file info
-	info, err := file.Stat()
-	if err != nil {
-		return err
-	}
+		// Get file info
+		info, err := file.Stat()
+		if err != nil {
+			return err
+		}
 
-	// POST requests only update the offline feed.
-	b := &storage.Blob{
-		Name:         repoMappingZipfileName,
-		LastUpdated:  timestamp.TimestampNow(),
-		ModifiedTime: timestamp.TimestampNow(),
-		Length:       info.Size(),
-	}
+		// POST requests only update the offline feed.
+		b := &storage.Blob{
+			Name:         file.Name(),
+			LastUpdated:  timestamp.TimestampNow(),
+			ModifiedTime: timestamp.TimestampNow(),
+			Length:       info.Size(),
+		}
 
-	if err := h.blobStore.Upsert(sac.WithAllAccess(ctx), b, file); err != nil {
-		return errors.Wrap(err, "writing scanner definitions")
+		if err := h.blobStore.Upsert(sac.WithAllAccess(ctx), b, file); err != nil {
+			return errors.Wrap(err, "writing scanner definitions")
+		}
+
+		file.Close()
 	}
 
 	return nil
