@@ -293,7 +293,9 @@ func (q *query) AsSQL() string {
 	}
 	// Performing this operation on full query is safe since table names and column names
 	// can only contain alphanumeric and underscore character.
-	return replaceVars(querySB.String())
+	sqlString := replaceVars(querySB.String())
+	log.Infof("SHREWS -- the SQL is %q", sqlString)
+	return sqlString
 }
 
 type parsedPaginationQuery struct {
