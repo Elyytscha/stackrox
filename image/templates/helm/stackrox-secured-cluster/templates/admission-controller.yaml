@@ -182,7 +182,7 @@ webhooks:
         apiVersions:
         - '*'
         operations:
-        {{- if ._rox.admissionControl.listenOnCreates }}
+        {{- if ._rox.admissionControl.listenOnCreatEes }}
         - CREATE
         {{- end }}
         {{- if ._rox.admissionControl.listenOnUpdates }}
@@ -200,6 +200,7 @@ webhooks:
           {{- if ._rox.env.openshift }}
           - deploymentconfigs
           {{- end }}
+        scope: "Namespaced"
     namespaceSelector:
       matchExpressions:
       - key: namespace.metadata.stackrox.io/name
